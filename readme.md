@@ -43,6 +43,6 @@ OS Version:     Windows 10/Server 2019 (Build 19041)
 ```
 
 ## Sources
-Much of the information used to crete this software came from this excellent in depth page on the NTLMSSP protocol.
+Much of the information used to create this software came from this excellent in depth page on the NTLMSSP protocol.
 
 http://davenport.sourceforge.net/ntlm.html
