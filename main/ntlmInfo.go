@@ -128,7 +128,7 @@ func decodeChallenge(challenge []byte, offset uint16) [6][2]string {
 		}
 	}
 
-	if offset > 48 {
+		if offset > 48 {
 		dataOut[5][0] = types[5]
 		major := int(challenge[48])
 		minor := int(challenge[49])
@@ -150,7 +150,11 @@ func decodeChallenge(challenge []byte, offset uint16) [6][2]string {
 		case "6.3":
 			majorMinor = "Windows 8.1/Server 2012 R2 (Build " + strconv.Itoa(build) + ")"
 		case "10.0":
-			if build >= 17623 {
+			if build >= 22000 {
+				majorMinor = "Windows 11/Server 2022 (Build " + strconv.Itoa(build) + ")"
+			}else if build >= 20348 {
+				majorMinor = "Windows 10/Server 2022 (Build " + strconv.Itoa(build) + ")"
+			}else if build >= 17623 {
 				majorMinor = "Windows 10/Server 2019 (Build " + strconv.Itoa(build) + ")"
 			} else {
 				majorMinor = "Windows 10/Server 2016 (Build " + strconv.Itoa(build) + ")"
