@@ -34,12 +34,15 @@ HTTPS: 443
 
 The output should be as follows:
 ```
-Domain Name:    CHILDDOMAIN
-Server Name:    HOSTNETBIOS
-Domain FQDN:    childdomain.parentdomain.tld
-Server FQDN:    hostnetbios.childdomain.parentdomain.tld
-Parent Domain:  parentdomain.tld
-OS Version:     Windows 10/Server 2019 (Build 19041)
++-------------------+-----------------------------------------------+
+|       Server Name | CHILDDOMAIN                                   |
+|       Domain Name | HOSTNETBIOS                                   |
+|       Server FQDN | childdomain.parentdomain.tld                  |
+|       Domain FQDN | hostnetbios.childdomain.parentdomain.tld      |
+|     Parent Domain | parentdomain.tld                              |
+| OS Version Number | 10.0.19041                                    |
+|        OS Version | Windows 10/Server 2019 (Build 19041)          |
++-------------------+-----------------------------------------------+
 ```
 
 ## Sources
