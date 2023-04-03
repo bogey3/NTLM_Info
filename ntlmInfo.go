@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"fmt"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"net/url"
@@ -40,45 +40,57 @@ type type2ChallengeStruct struct {
 	osVersionString string
 }
 
-func (t *targetStruct) getChallenge() {
+func (t *targetStruct) getChallenge() error {
+	var err error
+
 	switch t.targetURL.Scheme {
 	case "http":
-		t.getHTTPChallenge()
+		err = t.getHTTPChallenge()
 	case "https":
-		t.getHTTPChallenge()
+		err = t.getHTTPChallenge()
 	case "rdp":
-		t.getRDPChallenge()
+		err = t.getRDPChallenge()
 	case "smtp":
-		t.getSMTPChallenge()
+		err = t.getSMTPChallenge()
 	default:
 		usage()
 	}
 
+	if err == nil {
+		t.challenge.decode()
+
+	}
+	return err
+
 }
 
-func (t *targetStruct) getHTTPChallenge() {
-	if proxy, err := getProxy(); err == nil {
-		http.DefaultTransport.(*http.Transport).Proxy = http.ProxyURL(&proxy)
-	}
+func (t *targetStruct) getHTTPChallenge() error {
+	http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	wwwAuthHeader := "NTLM " + REQ_FOR_CHALLENGE
-	type1Request, _ := http.NewRequest("GET", t.targetURL.String(), nil)
-	type1Request.Header.Add("Authorization", wwwAuthHeader)
-	type2Response, _ := http.DefaultClient.Do(type1Request)
-	type2Challenge := type2Response.Header.Get("Www-Authenticate")
-	if type2Challenge == ""{
-		fmt.Println("This url does not support NTLM or Negotiate authentication.")
-		return
+	type1Request, err := http.NewRequest("GET", t.targetURL.String(), nil)
+	if err == nil {
+		type1Request.Header.Add("Authorization", wwwAuthHeader)
+		type2Response, err := http.DefaultClient.Do(type1Request)
+		if err == nil {
+			type2Challenge := type2Response.Header.Get("Www-Authenticate")
+			if type2Challenge == "" {
+				fmt.Println("This url does not support NTLM or Negotiate authentication.")
+				return errors.New("This url does not support NTLM or Negotiate authentication.")
+			}
+			type2Challenge = type2Challenge[strings.Index(type2Challenge, " ")+1:]
+			if strings.Contains(type2Challenge, ",") {
+				type2Challenge = type2Challenge[:strings.LastIndex(type2Challenge, ",")]
+			}
+			t.challenge.rawChallenge, err = base64.StdEncoding.DecodeString(type2Challenge)
+			return err
+		}
 	}
-	type2Challenge = type2Challenge[strings.Index(type2Challenge, " ")+1:]
-	if strings.Contains(type2Challenge, ",") {
-		type2Challenge = type2Challenge[:strings.LastIndex(type2Challenge, ",")]
-	}
-	t.challenge.rawChallenge, _ = base64.StdEncoding.DecodeString(type2Challenge)
+	return err
 }
 
-func (t *targetStruct) getRDPChallenge() {
+func (t *targetStruct) getRDPChallenge() error {
 
 	if !strings.Contains(t.targetURL.Host, ":") {
 		t.targetURL.Host = t.targetURL.Host + ":3389"
@@ -86,53 +98,34 @@ func (t *targetStruct) getRDPChallenge() {
 	challenge := make([]byte, 2048)
 	var pConn net.Conn
 	var err error
-	if useSocks {
-		d, err := proxy.SOCKS5("tcp", socksProxy, nil, proxy.Direct)
-		if err != nil {
-			panic(err)
-		}
-		pConn, err = d.Dial("tcp", t.targetURL.Host)
-		if err != nil{
-			panic(err)
-		}
-	} else {
-		d := net.Dialer{Timeout: 10 * time.Second}
-		pConn, err = d.Dial("tcp", t.targetURL.Host)
-	}
+	d := net.Dialer{Timeout: 10 * time.Second}
+	pConn, err = d.Dial("tcp", t.targetURL.Host)
 	conn := tls.Client(pConn, &tls.Config{InsecureSkipVerify: true})
+
 	if err == nil {
 		NLAData := append(append([]byte{48, 55, 160, 3, 2, 1, 96, 161, 48, 48, 46, 48, 44, 160, 42, 4, 40}, REQ_FOR_CHALLENGE_BYTES...), []byte{0, 0, 10, 0, 99, 69, 0, 0, 0, 15}...)
 		_, err = conn.Write(NLAData)
 		if err == nil {
-			readLen, _ := conn.Read(challenge)
-			challenge = challenge[23:readLen]
-			t.challenge.rawChallenge = challenge
+			readLen, err := conn.Read(challenge)
+			if err == nil {
+				challenge = challenge[23:readLen]
+				t.challenge.rawChallenge = challenge
+			}
 		}
-	}else {
-		fmt.Println("Could not connect to RDP server")
 	}
+	return err
 }
 
-func (t *targetStruct) getSMTPChallenge() {
+func (t *targetStruct) getSMTPChallenge() error {
 	if !strings.Contains(t.targetURL.Host, ":") {
 		t.targetURL.Host = t.targetURL.Host + ":25"
 	}
 	buffer := make([]byte, 1024)
 	var conn net.Conn
 	var err error
-	if useSocks {
-		d, err := proxy.SOCKS5("tcp", socksProxy, nil, proxy.Direct)
-		if err != nil {
-			panic(err)
-		}
-		conn, err = d.Dial("tcp", t.targetURL.Host)
-		if err != nil{
-			panic(err)
-		}
-	} else {
-		d := net.Dialer{Timeout: 10 * time.Second}
-		conn, err = d.Dial("tcp", t.targetURL.Host)
-	}
+	d := net.Dialer{Timeout: 10 * time.Second}
+	conn, err = d.Dial("tcp", t.targetURL.Host)
+
 	if err == nil {
 		conn.Read(buffer)
 		conn.Write([]byte("EHLO test.com\r\n"))
@@ -140,17 +133,33 @@ func (t *targetStruct) getSMTPChallenge() {
 		data := string(buffer[:n])
 		if strings.Contains(data, "NTLM") {
 			conn.Write([]byte("AUTH NTLM " + REQ_FOR_CHALLENGE + "\r\n"))
-			n, _ = conn.Read(buffer)
-			data = string(buffer[:n])
-			challengeStr := strings.Split(data, " ")[1]
-			type2ChallengeBytes, _ := base64.StdEncoding.DecodeString(challengeStr)
-			t.challenge.rawChallenge = type2ChallengeBytes
-
+			n, err = conn.Read(buffer)
+			if err == nil {
+				data = string(buffer[:n])
+				challengeStr := strings.Split(data, " ")[1]
+				type2ChallengeBytes, err := base64.StdEncoding.DecodeString(challengeStr)
+				if err == nil {
+					t.challenge.rawChallenge = type2ChallengeBytes
+				}
+			}
 		} else {
-			fmt.Println("This SMTP server does not support NTLM authentication.")
+			return errors.New("This SMTP server does not support NTLM authentication.")
 		}
-	} else {
-		fmt.Println("Could not connect to SMTP server")
+	}
+	return err
+}
+
+func(t *targetStruct) print(){
+	if t.challenge.rawChallenge != nil {
+		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
+		fmt.Printf("| %17s | %-45s |\n", "Server Name", t.challenge.serverName)
+		fmt.Printf("| %17s | %-45s |\n", "Domain Name", t.challenge.domainName)
+		fmt.Printf("| %17s | %-45s |\n", "Server FQDN", t.challenge.serverFQDN)
+		fmt.Printf("| %17s | %-45s |\n", "Domain FQDN", t.challenge.domainFQDN)
+		fmt.Printf("| %17s | %-45s |\n", "Parent Domain", t.challenge.parentDomain)
+		fmt.Printf("| %17s | %-45s |\n", "OS Version Number", t.challenge.osVersionNumber)
+		fmt.Printf("| %17s | %-45s |\n", "OS Version", t.challenge.osVersionString)
+		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
 	}
 }
 
@@ -217,21 +226,9 @@ func usage() {
 	os.Exit(1)
 }
 
-var useSocks = false
-var socksProxy = ""
-
 func main() {
 	if len(os.Args) < 2 {
 		usage()
-	}
-
-	for i, arg := range os.Args {
-		if arg == "-p" {
-			os.Args = append(os.Args[:i], os.Args[i+1:]...)
-			socksProxy = os.Args[i]
-			useSocks = true
-			os.Args = append(os.Args[:i], os.Args[i+1:]...)
-		}
 	}
 
 	var err error
@@ -243,18 +240,9 @@ func main() {
 		usage()
 	}
 
-	target.getChallenge()
-	if target.challenge.rawChallenge != nil {
-		target.challenge.decode()
-		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
-		fmt.Printf("| %17s | %-45s |\n", "Server Name", target.challenge.serverName)
-		fmt.Printf("| %17s | %-45s |\n", "Domain Name", target.challenge.domainName)
-		fmt.Printf("| %17s | %-45s |\n", "Server FQDN", target.challenge.serverFQDN)
-		fmt.Printf("| %17s | %-45s |\n", "Domain FQDN", target.challenge.domainFQDN)
-		fmt.Printf("| %17s | %-45s |\n", "Parent Domain", target.challenge.parentDomain)
-		fmt.Printf("| %17s | %-45s |\n", "OS Version Number", target.challenge.osVersionNumber)
-		fmt.Printf("| %17s | %-45s |\n", "OS Version", target.challenge.osVersionString)
-		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
+	if err := target.getChallenge(); err != nil{
+		panic(err)
 	}
+	target.print()
 	os.Exit(0)
 }
