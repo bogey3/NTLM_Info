@@ -1,4 +1,4 @@
-package main
+package NTLM_Info
 
 import (
 	"crypto/tls"
@@ -53,7 +53,7 @@ func (t *TargetStruct) GetChallenge() error {
 	case "smtp":
 		err = t.getSMTPChallenge()
 	default:
-		usage()
+		return errors.New("Unrecognized URL scheme.")
 	}
 
 	if err == nil {
@@ -219,30 +219,4 @@ func (t *type2ChallengeStruct) decode() {
 			t.osVersionString = strconv.Itoa(major) + "." + strconv.Itoa(minor) + "." + strconv.Itoa(build)
 		}
 	}
-}
-
-func usage() {
-	fmt.Println("NTLM Authentication Information Disclosure\n\n\t" + os.Args[0] + " https://mail.example.com/ews\n\t" + os.Args[0] + " smtp://mail.example.com\n\t" + os.Args[0] + " rdp://computer.example.com\n\nSocks proxying has been implemented for RDP and SMTP\n\t" + os.Args[0] + " -p 127.0.0.1:1080 smtp://mail.example.com\n\t" + os.Args[0] + " -p 127.0.0.1:1080 rdp://computer.example.com")
-	os.Exit(1)
-}
-
-func main() {
-	if len(os.Args) < 2 {
-		usage()
-	}
-
-	var err error
-	target := TargetStruct{}
-	target.targetURL, err = url.Parse(os.Args[1])
-
-	if err != nil {
-		fmt.Println(err)
-		usage()
-	}
-
-	if err := target.GetChallenge(); err != nil{
-		panic(err)
-	}
-	target.Print()
-	os.Exit(0)
 }
