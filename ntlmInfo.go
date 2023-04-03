@@ -24,7 +24,7 @@ const REQ_FOR_CHALLENGE = "TlRMTVNTUAABAAAAB4IIAAAAAAAAAAAAAAAAAAAAAAA="
 
 var REQ_FOR_CHALLENGE_BYTES = []byte{78, 84, 76, 77, 83, 83, 80, 0, 1, 0, 0, 0, 7, 130, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-type targetStruct struct {
+type TargetStruct struct {
 	targetURL *url.URL
 	challenge type2ChallengeStruct
 }
@@ -40,7 +40,7 @@ type type2ChallengeStruct struct {
 	osVersionString string
 }
 
-func (t *targetStruct) getChallenge() error {
+func (t *TargetStruct) GetChallenge() error {
 	var err error
 
 	switch t.targetURL.Scheme {
@@ -64,7 +64,7 @@ func (t *targetStruct) getChallenge() error {
 
 }
 
-func (t *targetStruct) getHTTPChallenge() error {
+func (t *TargetStruct) getHTTPChallenge() error {
 	http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
@@ -90,7 +90,7 @@ func (t *targetStruct) getHTTPChallenge() error {
 	return err
 }
 
-func (t *targetStruct) getRDPChallenge() error {
+func (t *TargetStruct) getRDPChallenge() error {
 
 	if !strings.Contains(t.targetURL.Host, ":") {
 		t.targetURL.Host = t.targetURL.Host + ":3389"
@@ -116,7 +116,7 @@ func (t *targetStruct) getRDPChallenge() error {
 	return err
 }
 
-func (t *targetStruct) getSMTPChallenge() error {
+func (t *TargetStruct) getSMTPChallenge() error {
 	if !strings.Contains(t.targetURL.Host, ":") {
 		t.targetURL.Host = t.targetURL.Host + ":25"
 	}
@@ -149,7 +149,7 @@ func (t *targetStruct) getSMTPChallenge() error {
 	return err
 }
 
-func(t *targetStruct) print(){
+func(t *TargetStruct) Print(){
 	if t.challenge.rawChallenge != nil {
 		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
 		fmt.Printf("| %17s | %-45s |\n", "Server Name", t.challenge.serverName)
@@ -232,7 +232,7 @@ func main() {
 	}
 
 	var err error
-	target := targetStruct{}
+	target := TargetStruct{}
 	target.targetURL, err = url.Parse(os.Args[1])
 
 	if err != nil {
@@ -240,9 +240,9 @@ func main() {
 		usage()
 	}
 
-	if err := target.getChallenge(); err != nil{
+	if err := target.GetChallenge(); err != nil{
 		panic(err)
 	}
-	target.print()
+	target.Print()
 	os.Exit(0)
 }
