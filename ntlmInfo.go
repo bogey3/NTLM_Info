@@ -75,7 +75,6 @@ func (t *TargetStruct) getHTTPChallenge() error {
 		if err == nil {
 			type2Challenge := type2Response.Header.Get("Www-Authenticate")
 			if type2Challenge == "" {
-				fmt.Println("This url does not support NTLM or Negotiate authentication.")
 				return errors.New("This url does not support NTLM or Negotiate authentication.")
 			}
 			type2Challenge = type2Challenge[strings.Index(type2Challenge, " ")+1:]
