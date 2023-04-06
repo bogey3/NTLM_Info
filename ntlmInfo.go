@@ -1,6 +1,7 @@
 package NTLM_Info
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/binary"
@@ -29,10 +30,10 @@ type TargetStruct struct {
 }
 
 type type2ChallengeStruct struct {
-	RawChallenge []byte
-	ServerName   string
-	DomainName string
-	ServerFQDN   string
+	RawChallenge    []byte
+	ServerName      string
+	DomainName      string
+	ServerFQDN      string
 	DomainFQDN      string
 	ParentDomain    string
 	OsVersionNumber string
@@ -56,7 +57,12 @@ func (t *TargetStruct) GetChallenge() error {
 	}
 
 	if err == nil {
-		t.Challenge.decode()
+		if bytes.Contains(t.Challenge.RawChallenge, []byte("NTLMSSP\x00")) {
+			t.Challenge.RawChallenge = t.Challenge.RawChallenge[bytes.Index(t.Challenge.RawChallenge, []byte("NTLMSSP\x00")):]
+			t.Challenge.decode()
+		} else {
+			return errors.New("Invalid NTLMSSP response.")
+		}
 
 	}
 	return err
@@ -147,7 +153,7 @@ func (t *TargetStruct) getSMTPChallenge() error {
 	return err
 }
 
-func(t *TargetStruct) Print(){
+func (t *TargetStruct) Print() {
 	if t.Challenge.RawChallenge != nil {
 		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
 		fmt.Printf("| %17s | %-45s |\n", "Server Name", t.Challenge.ServerName)
