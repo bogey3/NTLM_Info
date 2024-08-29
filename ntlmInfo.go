@@ -1,7 +1,6 @@
 package NTLM_Info
 
 import (
-	"bytes"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/binary"
@@ -40,6 +39,14 @@ type type2ChallengeStruct struct {
 	OsVersionString string
 }
 
+func NewTarget(urlString string) (*TargetStruct, error) {
+	targetURL, err := url.Parse(urlString)
+	if err != nil {
+		return nil, err
+	}
+	return &TargetStruct{targetURL, type2ChallengeStruct{}}, nil
+}
+
 func (t *TargetStruct) GetChallenge() error {
 	var err error
 
@@ -57,12 +64,7 @@ func (t *TargetStruct) GetChallenge() error {
 	}
 
 	if err == nil {
-		if bytes.Contains(t.Challenge.RawChallenge, []byte("NTLMSSP\x00")) {
-			t.Challenge.RawChallenge = t.Challenge.RawChallenge[bytes.Index(t.Challenge.RawChallenge, []byte("NTLMSSP\x00")):]
-			t.Challenge.decode()
-		} else {
-			return errors.New("Invalid NTLMSSP response.")
-		}
+		t.Challenge.decode()
 
 	}
 	return err
@@ -81,6 +83,7 @@ func (t *TargetStruct) getHTTPChallenge() error {
 		if err == nil {
 			type2Challenge := type2Response.Header.Get("Www-Authenticate")
 			if type2Challenge == "" {
+				fmt.Println("This url does not support NTLM or Negotiate authentication.")
 				return errors.New("This url does not support NTLM or Negotiate authentication.")
 			}
 			type2Challenge = type2Challenge[strings.Index(type2Challenge, " ")+1:]
@@ -155,6 +158,8 @@ func (t *TargetStruct) getSMTPChallenge() error {
 
 func (t *TargetStruct) Print() {
 	if t.Challenge.RawChallenge != nil {
+		fmt.Printf("+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
+		fmt.Printf("| %17s | %-45s |\n", "URL", t.TargetURL.String())
 		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
 		fmt.Printf("| %17s | %-45s |\n", "Server Name", t.Challenge.ServerName)
 		fmt.Printf("| %17s | %-45s |\n", "Domain Name", t.Challenge.DomainName)
