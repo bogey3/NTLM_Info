@@ -158,7 +158,7 @@ func (t *TargetStruct) getSMTPChallenge() error {
 
 func (t *TargetStruct) Print() {
 	if t.Challenge.RawChallenge != nil {
-		fmt.Printf("+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
+		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
 		fmt.Printf("| %17s | %-45s |\n", "URL", t.TargetURL.String())
 		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
 		fmt.Printf("| %17s | %-45s |\n", "Server Name", t.Challenge.ServerName)
