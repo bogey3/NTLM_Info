@@ -8,7 +8,7 @@ This module can be used to extract information using the NTLMSSP challenge provi
 This module can retrieve NTLMSSP information from HTTP, SMTP, and RDP servers.
 
 Below is a simple sample program that uses this module:
-```
+```go
 package main
 
 import (
