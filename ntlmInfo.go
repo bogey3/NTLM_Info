@@ -92,7 +92,7 @@ func (t *TargetStruct) getHTTPChallenge() error {
 			t.Challenge.RawChallenge, err = base64.StdEncoding.DecodeString(type2Challenge)
 			return err
 		} else {
-			panic(err)
+			return err
 		}
 	}
 	return err
