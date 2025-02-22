@@ -250,15 +250,25 @@ func (t *type2ChallengeStruct) decode() {
 		case "6.3":
 			t.OsVersionString = "Windows 8.1/Server 2012 R2 (Build " + strconv.Itoa(build) + ")"
 		case "10.0":
-			if build >= 22000 {
-				t.OsVersionString = "Windows 11/Server 2022 (Build " + strconv.Itoa(build) + ")"
+			consumer := 10
+			server := 2016
+			if build >= 26100 {
+				consumer = 11
+				server = 2025
+			} else if build >= 22000 {
+				consumer = 11
+				server = 2022
 			} else if build >= 20348 {
-				t.OsVersionString = "Windows 10/Server 2022 (Build " + strconv.Itoa(build) + ")"
+				consumer = 10
+				server = 2022
 			} else if build >= 17623 {
-				t.OsVersionString = "Windows 10/Server 2019 (Build " + strconv.Itoa(build) + ")"
+				consumer = 10
+				server = 2019
 			} else {
-				t.OsVersionString = "Windows 10/Server 2016 (Build " + strconv.Itoa(build) + ")"
+				consumer = 10
+				server = 2016
 			}
+			t.OsVersionString = fmt.Sprintf("Windows %s/Server %s (Build %s)", consumer, server, build)
 		default:
 			t.OsVersionString = strconv.Itoa(major) + "." + strconv.Itoa(minor) + "." + strconv.Itoa(build)
 		}
