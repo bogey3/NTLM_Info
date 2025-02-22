@@ -5,7 +5,7 @@ This module was written using Go version 1.15.5, other versions will likely work
 This module can be used to extract information using the NTLMSSP challenge provided during NTLM authentication.
 
 ## How to use this module
-This module can retrieve NTLMSSP information from HTTP, SMTP, and RDP servers.
+This module can retrieve NTLMSSP information from HTTP, SMB, SMTP, and RDP servers.
 
 Below is a simple sample program that uses this module:
 ```go
