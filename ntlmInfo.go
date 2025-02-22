@@ -268,7 +268,7 @@ func (t *type2ChallengeStruct) decode() {
 				consumer = 10
 				server = 2016
 			}
-			t.OsVersionString = fmt.Sprintf("Windows %s/Server %s (Build %s)", consumer, server, build)
+			t.OsVersionString = fmt.Sprintf("Windows %d/Server %d (Build %d)", consumer, server, build)
 		default:
 			t.OsVersionString = strconv.Itoa(major) + "." + strconv.Itoa(minor) + "." + strconv.Itoa(build)
 		}
