@@ -1,7 +1,5 @@
 # NTLMSSP Information Disclosure
 
-This module was written using Go version 1.15.5, other versions will likely work but are not tested.
-
 This module can be used to extract information using the NTLMSSP challenge provided during NTLM authentication.
 
 ## How to use this module
