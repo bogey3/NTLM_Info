@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -212,17 +213,19 @@ func (t *TargetStruct) getSMTPChallenge() error {
 
 func (t *TargetStruct) Print() {
 	if t.Challenge.RawChallenge != nil {
-		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
-		fmt.Printf("| %17s | %-45s |\n", "URL", t.TargetURL.String())
-		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
-		fmt.Printf("| %17s | %-45s |\n", "Server Name", t.Challenge.ServerName)
-		fmt.Printf("| %17s | %-45s |\n", "Domain Name", t.Challenge.DomainName)
-		fmt.Printf("| %17s | %-45s |\n", "Server FQDN", t.Challenge.ServerFQDN)
-		fmt.Printf("| %17s | %-45s |\n", "Domain FQDN", t.Challenge.DomainFQDN)
-		fmt.Printf("| %17s | %-45s |\n", "Parent Domain", t.Challenge.ParentDomain)
-		fmt.Printf("| %17s | %-45s |\n", "OS Version Number", t.Challenge.OsVersionNumber)
-		fmt.Printf("| %17s | %-45s |\n", "OS Version", t.Challenge.OsVersionString)
-		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", 47))
+		column2Length := int(math.Max(45, float64(len(t.TargetURL.String()))))
+		formatString := fmt.Sprintf("| %%17s | %%-%ds |\n", column2Length)
+		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", column2Length+2))
+		fmt.Printf(formatString, "URL", t.TargetURL.String())
+		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", column2Length+2))
+		fmt.Printf(formatString, "Server Name", t.Challenge.ServerName)
+		fmt.Printf(formatString, "Domain Name", t.Challenge.DomainName)
+		fmt.Printf(formatString, "Server FQDN", t.Challenge.ServerFQDN)
+		fmt.Printf(formatString, "Domain FQDN", t.Challenge.DomainFQDN)
+		fmt.Printf(formatString, "Parent Domain", t.Challenge.ParentDomain)
+		fmt.Printf(formatString, "OS Version Number", t.Challenge.OsVersionNumber)
+		fmt.Printf(formatString, "OS Version", t.Challenge.OsVersionString)
+		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", column2Length+2))
 	}
 }
 
