@@ -25,6 +25,26 @@ const REQ_FOR_CHALLENGE = "TlRMTVNTUAABAAAAFYIIYgAAAAAoAAAAAAAAACgAAAAAAAAAAAAAA
 
 var REQ_FOR_CHALLENGE_BYTES = []byte{0x4e, 0x54, 0x4c, 0x4d, 0x53, 0x53, 0x50, 0x00, 0x01, 0x00, 0x00, 0x00, 0x15, 0x82, 0x08, 0x62, 0x00, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 
+func createHTTPClients() (*http.Client, *http.Client) {
+
+	http2EnabledClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	http2DisabledClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSNextProto:    map[string]func(authority string, c *tls.Conn) http.RoundTripper{},
+		},
+	}
+
+	return http2EnabledClient, http2DisabledClient
+}
+
 type TargetStruct struct {
 	TargetURL *url.URL
 	Challenge type2ChallengeStruct
@@ -53,10 +73,9 @@ func (t *TargetStruct) GetChallenge() error {
 	var err error
 
 	switch t.TargetURL.Scheme {
-	case "http":
-		err = t.getHTTPChallenge()
-	case "https":
-		err = t.getHTTPChallenge()
+	case "http", "https":
+		http2EnabledClient, http2DisabledClient := createHTTPClients()
+		err = t.getHTTPChallenge(http2EnabledClient, http2DisabledClient)
 	case "rdp":
 		err = t.getRDPChallenge()
 	case "smtp":
@@ -75,15 +94,12 @@ func (t *TargetStruct) GetChallenge() error {
 
 }
 
-func (t *TargetStruct) getHTTPChallenge() error {
-	http.DefaultTransport.(*http.Transport).Proxy = http.ProxyFromEnvironment
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-
+func (t *TargetStruct) getHTTPChallenge(primaryClient *http.Client, secondaryClient *http.Client) error {
 	wwwAuthHeader := "NTLM " + REQ_FOR_CHALLENGE
 	type1Request, err := http.NewRequest("GET", t.TargetURL.String(), nil)
 	if err == nil {
 		type1Request.Header.Add("Authorization", wwwAuthHeader)
-		type2Response, err := http.DefaultClient.Do(type1Request)
+		type2Response, err := primaryClient.Do(type1Request)
 		if err == nil {
 			type2Challenge := type2Response.Header.Get("Www-Authenticate")
 			if type2Challenge == "" {
@@ -96,6 +112,9 @@ func (t *TargetStruct) getHTTPChallenge() error {
 			t.Challenge.RawChallenge, err = base64.StdEncoding.DecodeString(type2Challenge)
 			return err
 		} else {
+			if strings.Contains(err.Error(), "HTTP_1_1_REQUIRED") {
+				return t.getHTTPChallenge(secondaryClient, primaryClient)
+			}
 			return err
 		}
 	}
