@@ -96,7 +96,19 @@ func (t *TargetStruct) GetChallenge() error {
 }
 
 func (t *TargetStruct) getHTTPChallenge(primaryClient *http.Client, secondaryClient *http.Client) error {
-	wwwAuthHeader := "NTLM " + REQ_FOR_CHALLENGE
+	baselineRequest, err := http.NewRequest("GET", t.TargetURL.String(), nil)
+	authType := "Negotiate"
+	if err == nil {
+		baselineResponse, err := primaryClient.Do(baselineRequest)
+		if err == nil {
+			authHeader := baselineResponse.Header.Get("Www-Authenticate")
+			if strings.Contains(authHeader, "NTLM") {
+				authType = "NTLM"
+			}
+		}
+	}
+
+	wwwAuthHeader := fmt.Sprintf("%s %s", authType, REQ_FOR_CHALLENGE)
 	type1Request, err := http.NewRequest("GET", t.TargetURL.String(), nil)
 	if err == nil {
 		type1Request.Header.Add("Authorization", wwwAuthHeader)
