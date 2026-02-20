@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -59,7 +58,6 @@ type type2ChallengeStruct struct {
 	DomainFQDN      string
 	ParentDomain    string
 	OsVersionNumber string
-	OsVersionString string
 }
 
 func NewTarget(urlString string) (*TargetStruct, error) {
@@ -236,7 +234,6 @@ func (t *TargetStruct) Print() {
 		fmt.Printf(formatString, "Domain FQDN", t.Challenge.DomainFQDN)
 		fmt.Printf(formatString, "Parent Domain", t.Challenge.ParentDomain)
 		fmt.Printf(formatString, "OS Version Number", t.Challenge.OsVersionNumber)
-		fmt.Printf(formatString, "OS Version", t.Challenge.OsVersionString)
 		fmt.Printf("+%s+%s+\n", strings.Repeat("-", 19), strings.Repeat("-", column2Length+2))
 	}
 }
@@ -267,44 +264,6 @@ func (t *type2ChallengeStruct) decode() {
 		major := int(t.RawChallenge[48])
 		minor := int(t.RawChallenge[49])
 		build := int(binary.LittleEndian.Uint16(t.RawChallenge[50:52]))
-		t.OsVersionNumber = strconv.Itoa(major) + "." + strconv.Itoa(minor) + "." + strconv.Itoa(build)
-		switch strconv.Itoa(major) + "." + strconv.Itoa(minor) {
-		case "5.0":
-			t.OsVersionString = "Windows 2000 (Build " + strconv.Itoa(build) + ")"
-		case "5.1":
-			t.OsVersionString = "Windows XP/Server 2003 (R2) (Build " + strconv.Itoa(build) + ")"
-		case "5.2":
-			t.OsVersionString = "Windows XP/Server 2003 (R2) (Build " + strconv.Itoa(build) + ")"
-		case "6.0":
-			t.OsVersionString = "Windows Vista/Server 2008 (Build " + strconv.Itoa(build) + ")"
-		case "6.1":
-			t.OsVersionString = "Windows 7/Server 2008 R2 (Build " + strconv.Itoa(build) + ")"
-		case "6.2":
-			t.OsVersionString = "Windows 8/Server 2012 (Build " + strconv.Itoa(build) + ")"
-		case "6.3":
-			t.OsVersionString = "Windows 8.1/Server 2012 R2 (Build " + strconv.Itoa(build) + ")"
-		case "10.0":
-			consumer := 10
-			server := 2016
-			if build >= 26100 {
-				consumer = 11
-				server = 2025
-			} else if build >= 22000 {
-				consumer = 11
-				server = 2022
-			} else if build >= 20348 {
-				consumer = 10
-				server = 2022
-			} else if build >= 17623 {
-				consumer = 10
-				server = 2019
-			} else {
-				consumer = 10
-				server = 2016
-			}
-			t.OsVersionString = fmt.Sprintf("Windows %d/Server %d (Build %d)", consumer, server, build)
-		default:
-			t.OsVersionString = strconv.Itoa(major) + "." + strconv.Itoa(minor) + "." + strconv.Itoa(build)
-		}
+		t.OsVersionNumber = fmt.Sprintf("%d.%d.%d", major, minor, build)
 	}
 }
